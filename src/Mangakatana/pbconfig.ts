@@ -1,22 +1,17 @@
 import { ContentRating, SourceInfo, SourceIntents } from "@paperback/types";
 
 export default {
-  name: "Mangakatana",
-  description: "Mangakatana extension",
-  version: "1.0.0-alpha.1",
+  name: "MangaKatana",
+  description: "Extension that pulls content from mangakatana.com.",
+  version: "1.0.0-alpha.2",
   icon: "icon.png",
   language: "en",
-  contentRating: ContentRating.EVERYONE,
+  contentRating: ContentRating.MATURE,
   badges: [
     {
-      label: "Content Providing",
+      label: "Aggregator",
       textColor: "#FFFFFF",
-      backgroundColor: "#FF0000",
-    },
-    {
-      label: "English",
-      textColor: "#000000",
-      backgroundColor: "#00ffff",
+      backgroundColor: "#1d4ed8",
     },
     {
       label: "Manga",
@@ -28,9 +23,23 @@ export default {
       textColor: "#FFFFFF",
       backgroundColor: "#C71585",
     },
+    {
+      label: "Regular Release",
+      textColor: "#000000",
+      backgroundColor: "#fbbf24",
+    },
+    {
+      label: "Good Images",
+      textColor: "#000000",
+      backgroundColor: "#fbbf24",
+    },
+    {
+      label: "Good Translations",
+      textColor: "#FFFFFF",
+      backgroundColor: "#15803d",
+    },
   ],
   capabilities: [
-    SourceIntents.SETTINGS_UI,
     SourceIntents.DISCOVER_SECIONS,
     SourceIntents.MANGA_SEARCH,
     SourceIntents.MANGA_CHAPTERS,

@@ -1,4 +1,4 @@
-declare namespace Katana {
+declare namespace Toonily {
   type Metadata = { offset?: number; collectedIds?: string[] };
 
   interface Result {
