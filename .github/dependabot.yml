@@ -14,7 +14,7 @@ updates:
       security:
         applies-to: security-updates
         patterns:
-          - '*'
+          - "*"
       minor_patch:
         update-types:
           - minor
@@ -24,5 +24,4 @@ updates:
           - major
       pre_release:
         patterns:
-          - '*'
-
+          - "*"

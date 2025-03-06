@@ -1,10 +1,32 @@
-import { BasicRateLimiter, Chapter, ChapterDetails, ChapterProviding, CloudflareError, ContentRating, DiscoverSection, DiscoverSectionItem, DiscoverSectionProviding, DiscoverSectionType, Extension, MangaProviding, PagedResults, PaperbackInterceptor, Request, Response, SearchFilter, SearchQuery, SearchResultItem, SearchResultsProviding, SourceManga, TagSection } from "@paperback/types";
+import {
+  BasicRateLimiter,
+  Chapter,
+  ChapterDetails,
+  ChapterProviding,
+  CloudflareError,
+  ContentRating,
+  DiscoverSection,
+  DiscoverSectionItem,
+  DiscoverSectionProviding,
+  DiscoverSectionType,
+  Extension,
+  MangaProviding,
+  PagedResults,
+  PaperbackInterceptor,
+  Request,
+  Response,
+  SearchFilter,
+  SearchQuery,
+  SearchResultItem,
+  SearchResultsProviding,
+  SourceManga,
+  TagSection,
+} from "@paperback/types";
 import * as cheerio from "cheerio";
 import { CheerioAPI } from "cheerio";
 import { URLBuilder } from "../utils/url-builder/base";
-import {genres} from "./genres";
-import {genreOptions} from "./genreOptions";
-
+import { genreOptions } from "./genreOptions";
+import { genres } from "./genres";
 
 const DOMAIN_NAME = "https://toonily.com";
 
@@ -23,7 +45,7 @@ class MainInterceptor extends PaperbackInterceptor {
       referer: DOMAIN_NAME,
       origin: DOMAIN_NAME,
       "user-agent": await Application.getDefaultUserAgent(),
-      "Cookie": "toonily-mature=1",
+      Cookie: "toonily-mature=1",
     };
 
     return request;
@@ -57,36 +79,35 @@ export class ToonilyExtension implements ToonilyImplementation {
   }
 
   async getDiscoverSections(): Promise<DiscoverSection[]> {
-
-    const get_new_on_toonily: DiscoverSectionItem = {
+    const get_new_on_toonily: DiscoverSection = {
       id: "get-new-on-toonily",
       title: "New on Toonily",
-      type: DiscoverSectionType.featured
-    }
+      type: DiscoverSectionType.featured,
+    };
 
-    const get_latest_releases: DiscoverSectionItem = {
+    const get_latest_releases: DiscoverSection = {
       id: "get-latest-releases",
       title: "Latest Releases",
-      type: DiscoverSectionType.simpleCarousel
-    }
+      type: DiscoverSectionType.simpleCarousel,
+    };
 
-    const get_trending_section: DiscoverSectionItem = {
+    const get_trending_section: DiscoverSection = {
       id: "get-trending-section",
       title: "Trending",
-      type: DiscoverSectionType.simpleCarousel
-    }
+      type: DiscoverSectionType.simpleCarousel,
+    };
 
-    const get_genre_section: DiscoverSectionItem = {
+    const get_genre_section: DiscoverSection = {
       id: "get-genre-section",
       title: "Genres",
-      type: DiscoverSectionType.genres
-    }
+      type: DiscoverSectionType.genres,
+    };
 
     return [
       get_new_on_toonily,
       get_latest_releases,
       get_trending_section,
-      get_genre_section
+      get_genre_section,
     ];
   }
 
@@ -104,13 +125,15 @@ export class ToonilyExtension implements ToonilyImplementation {
         return this.getTrendingSection(section, metadata);
       case "get-genre-section":
         return this.getGenreSection();
+      default:
+        return { items: [] };
     }
   }
 
   // Populates the new on Toonily section
   async getNewOnToonily(
-      metadata: { page?: number; collectedIds?: string[] } | undefined,
-  ): Promise<PagedResults<DiscoverSectionItem>>  {
+    metadata: { page?: number; collectedIds?: string[] } | undefined,
+  ): Promise<PagedResults<DiscoverSectionItem>> {
     const page = metadata?.page ?? 1;
     const items: DiscoverSectionItem[] = [];
     const collectedIds = metadata?.collectedIds ?? [];
@@ -123,38 +146,41 @@ export class ToonilyExtension implements ToonilyImplementation {
     const $ = await this.fetchCheerio(request);
 
     // Extract "New on Toonily" section
-    $('section ul li.css-1urdgju').each((_, element) => {
+    $("section ul li.css-1urdgju").each((_, element) => {
       const unit = $(element);
-      const anchor = unit.find('a').first();
-      const href = anchor.attr('href') || '';
-      const mangaId = href.match(/\/serie\/(.+?)\/?$/)?.[1] || '';
-      const image = unit.find('img').attr('data-cfsrc') || '';
-      const title = unit.find('.txt span').text().trim();
+      const anchor = unit.find("a").first();
+      const href = anchor.attr("href") || "";
+      const mangaId = href.match(/\/serie\/(.+?)\/?$/)?.[1] || "";
+      const image = unit.find("img").attr("data-cfsrc") || "";
+      const title = unit.find(".txt span").text().trim();
 
       if (mangaId && title && image && !collectedIds.includes(mangaId)) {
         collectedIds.push(mangaId);
         items.push(
-            createDiscoverSectionItem({
-              id: mangaId,
-              image: image,
-              title: title,
-              type: 'simpleCarouselItem'
-            })
+          createDiscoverSectionItem({
+            id: mangaId,
+            image: image,
+            title: title,
+            type: "simpleCarouselItem",
+          }),
         );
       }
     });
 
     // Check if next button exists and is visible
-    const nextButton = $('.next_btn_topco-9MoRR_2');
-    const hasNextPage = nextButton.length > 0
-        && !nextButton.attr('style')?.includes('display: none');
+    const nextButton = $(".next_btn_topco-9MoRR_2");
+    const hasNextPage =
+      nextButton.length > 0 &&
+      !nextButton.attr("style")?.includes("display: none");
 
     return {
       items: items,
-      metadata: hasNextPage ? {
-        page: page + 1,
-        collectedIds
-      } : undefined,
+      metadata: hasNextPage
+        ? {
+            page: page + 1,
+            collectedIds,
+          }
+        : undefined,
     };
   }
 
@@ -163,7 +189,6 @@ export class ToonilyExtension implements ToonilyImplementation {
     section: DiscoverSection,
     metadata: { page?: number; collectedIds?: string[] } | undefined,
   ): Promise<PagedResults<DiscoverSectionItem>> {
-
     const page = metadata?.page ?? 1;
     const items: DiscoverSectionItem[] = [];
     const collectedIds = metadata?.collectedIds ?? [];
@@ -171,39 +196,40 @@ export class ToonilyExtension implements ToonilyImplementation {
     //https://toonily.com/page/2/
     const request = {
       url: new URLBuilder(DOMAIN_NAME)
-      .addPath("page")
-      .addPath(page.toString())
-      .build(),
+        .addPath("page")
+        .addPath(page.toString())
+        .build(),
       method: "GET",
     };
 
     const $ = await this.fetchCheerio(request);
 
     // Extract manga items from new HTML structure
-    $('.page-listing-item .col-6.col-sm-3.col-lg-2').each((_, element) => {
+    $(".page-listing-item .col-6.col-sm-3.col-lg-2").each((_, element) => {
       const unit = $(element);
-      const titleLink = unit.find('h3.h5 a').first();
-      const href = titleLink.attr('href') || '';
-      const mangaId = href.match(/\/serie\/(.+?)\/?$/)?.[1] || '';
-      const image = unit.find('img').attr('src') || unit.find('img').attr('data-src') || '';
+      const titleLink = unit.find("h3.h5 a").first();
+      const href = titleLink.attr("href") || "";
+      const mangaId = href.match(/\/serie\/(.+?)\/?$/)?.[1] || "";
+      const image =
+        unit.find("img").attr("src") || unit.find("img").attr("data-src") || "";
       const title = titleLink.text().trim();
 
       //console.log(`Here lies the ${image}`);
 
       // Extract latest chapter info
-      const chapterItem = unit.find('.list-chapter .chapter-item').first();
-      const subtitle = chapterItem.find('.chapter a').text().trim();
+      const chapterItem = unit.find(".list-chapter .chapter-item").first();
+      const subtitle = chapterItem.find(".chapter a").text().trim();
 
       if (mangaId && title && image && !collectedIds.includes(mangaId)) {
         collectedIds.push(mangaId);
         items.push(
-            createDiscoverSectionItem({
-              id: mangaId,
-              image: image,
-              title: title,
-              subtitle: subtitle,
-              type: 'simpleCarouselItem'
-            })
+          createDiscoverSectionItem({
+            id: mangaId,
+            image: image,
+            title: title,
+            subtitle: subtitle,
+            type: "simpleCarouselItem",
+          }),
         );
       }
     });
@@ -227,13 +253,11 @@ export class ToonilyExtension implements ToonilyImplementation {
     };
   }
 
-
   // Populates the trending section
   async getTrendingSection(
     section: DiscoverSection,
     metadata: { page?: number; collectedIds?: string[] } | undefined,
   ): Promise<PagedResults<DiscoverSectionItem>> {
-
     const page = metadata?.page ?? 1;
     const items: DiscoverSectionItem[] = [];
     const collectedIds = metadata?.collectedIds ?? [];
@@ -241,8 +265,7 @@ export class ToonilyExtension implements ToonilyImplementation {
     //https://toonily.com/webtoons/?m_orderby=trending
     //https://toonily.com/webtoons/page/2/?m_orderby=trending
     // Build URL with pagination in path
-    const urlBuilder = new URLBuilder(DOMAIN_NAME)
-        .addPath("webtoons");
+    const urlBuilder = new URLBuilder(DOMAIN_NAME).addPath("webtoons");
 
     if (page > 1) {
       urlBuilder.addPath("page").addPath(page.toString());
@@ -258,30 +281,31 @@ export class ToonilyExtension implements ToonilyImplementation {
     const $ = await this.fetchCheerio(request);
 
     // Extract manga items from new HTML structure
-    $('.page-listing-item .col-6.col-sm-3.col-lg-2').each((_, element) => {
+    $(".page-listing-item .col-6.col-sm-3.col-lg-2").each((_, element) => {
       const unit = $(element);
-      const titleLink = unit.find('h3.h5 a').first();
-      const href = titleLink.attr('href') || '';
-      const mangaId = href.match(/\/serie\/(.+?)\/?$/)?.[1] || '';
-      const image = unit.find('img').attr('src') || unit.find('img').attr('data-src') || '';
+      const titleLink = unit.find("h3.h5 a").first();
+      const href = titleLink.attr("href") || "";
+      const mangaId = href.match(/\/serie\/(.+?)\/?$/)?.[1] || "";
+      const image =
+        unit.find("img").attr("src") || unit.find("img").attr("data-src") || "";
       const title = titleLink.text().trim();
 
       //console.log(`Here lies the ${image}`);
 
       // Extract latest chapter info
-      const chapterItem = unit.find('.list-chapter .chapter-item').first();
-      const subtitle = chapterItem.find('.chapter a').text().trim();
+      const chapterItem = unit.find(".list-chapter .chapter-item").first();
+      const subtitle = chapterItem.find(".chapter a").text().trim();
 
       if (mangaId && title && image && !collectedIds.includes(mangaId)) {
         collectedIds.push(mangaId);
         items.push(
-            createDiscoverSectionItem({
-              id: mangaId,
-              image: image,
-              title: title,
-              subtitle: subtitle,
-              type: 'simpleCarouselItem'
-            })
+          createDiscoverSectionItem({
+            id: mangaId,
+            image: image,
+            title: title,
+            subtitle: subtitle,
+            type: "simpleCarouselItem",
+          }),
         );
       }
     });
@@ -300,12 +324,10 @@ export class ToonilyExtension implements ToonilyImplementation {
       items: items,
       metadata: nextPage ? { page: nextPage, collectedIds } : undefined,
     };
-
   }
 
   // Populates the genre section
   async getGenreSection(): Promise<PagedResults<DiscoverSectionItem>> {
-
     return {
       items: genres.map((genre) => ({
         type: "genresCarouselItem",
@@ -318,7 +340,6 @@ export class ToonilyExtension implements ToonilyImplementation {
       })),
     };
   }
-
 
   // Populate search filters
   async getSearchFilters(): Promise<SearchFilter[]> {
@@ -346,48 +367,54 @@ export class ToonilyExtension implements ToonilyImplementation {
     metadata?: { page?: number },
   ): Promise<PagedResults<SearchResultItem>> {
     const page = metadata?.page ?? 1;
-    const urlBuilder = new URLBuilder(DOMAIN_NAME)
-      .addPath("search");
-  
+    const urlBuilder = new URLBuilder(DOMAIN_NAME).addPath("search");
+
     // Only add the search term path if it's not empty
-    if (query.title && query.title.trim() !== '') {
+    if (query.title && query.title.trim() !== "") {
       // Convert spaces to hyphens instead of encoding them as %20
-      const formattedQuery = query.title.trim().replace(/\s+/g, '-').replace(/’/g, "'"); ;
+      const formattedQuery = query.title
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/’/g, "'");
       // Don't encode apostrophes as they should remain in the URL
       urlBuilder.addPath(formattedQuery);
     }
-  
+
     // Add page path
-    urlBuilder.addPath("page")
-      .addPath(page.toString());
-  
+    urlBuilder.addPath("page").addPath(page.toString());
+
     // Get the filters to access the genre options
     const filters = await this.getSearchFilters();
-    const genreFilter = filters.find(f => f.id === 'genres');
-  
+    const genreFilter = filters.find((f) => f.id === "genres");
+
     // Define type for the multiselect filter
     interface FilterOption {
       id: string;
       value: string;
     }
-    
+
     type MultiselectFilter = SearchFilter & {
-      type: 'multiselect';
+      type: "multiselect";
       options: FilterOption[];
-    }
-    
+    };
+
     // Handle genres
-    const genresFilter = query.filters?.find(f => f.id === 'genres')?.value as Record<string, 'included' | 'excluded'>;
+    const genresFilter = query.filters?.find((f) => f.id === "genres")
+      ?.value as Record<string, "included" | "excluded">;
     if (genresFilter && genreFilter) {
       const typedGenreFilter = genreFilter as MultiselectFilter;
       let genreIndex = 0;
       Object.entries(genresFilter).forEach(([id, inclusion]) => {
-        if (inclusion === 'included') {
+        if (inclusion === "included") {
           // Get the genre option by id with proper typing
-          const genreOption = typedGenreFilter.options.find(opt => opt.id === id);
+          const genreOption = typedGenreFilter.options.find(
+            (opt) => opt.id === id,
+          );
           if (genreOption) {
             // Format genre value by converting to kebab-case
-            const genreValue = genreOption.value.toLowerCase().replace(/\s+/g, '-');
+            const genreValue = genreOption.value
+              .toLowerCase()
+              .replace(/\s+/g, "-");
             urlBuilder.addQuery(`genre[${genreIndex}]`, genreValue);
             genreIndex++;
           }
@@ -395,28 +422,29 @@ export class ToonilyExtension implements ToonilyImplementation {
         // Excluded genres not supported in the provided URL examples
       });
     }
-  
+
     // Add default query parameters that appear in all example URLs
     urlBuilder.addQuery("op", "");
     urlBuilder.addQuery("author", "");
     urlBuilder.addQuery("artist", "");
     urlBuilder.addQuery("adult", "");
-  
+
     const searchUrl = urlBuilder.build();
     const request = { url: searchUrl, method: "GET" };
     const $ = await this.fetchCheerio(request);
     const searchResults: SearchResultItem[] = [];
 
     console.log(`The URL is: ${searchUrl}`);
-  
-    $('.page-listing-item .col-6.col-sm-3.col-lg-2').each((_, element) => {
+
+    $(".page-listing-item .col-6.col-sm-3.col-lg-2").each((_, element) => {
       const unit = $(element);
-      const titleLink = unit.find('h3.h5 a').first();
-      const href = titleLink.attr('href') || '';
-      const mangaId = href.split('/serie/')[1]?.replace(/\/$/, '') || '';
-      const image = unit.find('img').attr('src') || unit.find('img').attr('data-src') || '';
+      const titleLink = unit.find("h3.h5 a").first();
+      const href = titleLink.attr("href") || "";
+      const mangaId = href.split("/serie/")[1]?.replace(/\/$/, "") || "";
+      const image =
+        unit.find("img").attr("src") || unit.find("img").attr("data-src") || "";
       const title = titleLink.text().trim();
-  
+
       if (mangaId && title) {
         searchResults.push({
           mangaId: mangaId,
@@ -426,15 +454,15 @@ export class ToonilyExtension implements ToonilyImplementation {
         });
       }
     });
-  
+
     // Check for next page
-    const nextPageHref = $('.nextpostslink').attr('href');
+    const nextPageHref = $(".nextpostslink").attr("href");
     let hasNextPage = false;
     if (nextPageHref) {
       const nextPageMatch = nextPageHref.match(/page\/(\d+)/);
       hasNextPage = !!nextPageMatch;
     }
-  
+
     return {
       items: searchResults,
       metadata: hasNextPage ? { page: page + 1 } : undefined,
@@ -445,66 +473,83 @@ export class ToonilyExtension implements ToonilyImplementation {
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
     console.log(`Here is my ID: ${mangaId}`);
     const request = {
-      url: new URLBuilder(DOMAIN_NAME).addPath("serie").addPath(mangaId).build(),
+      url: new URLBuilder(DOMAIN_NAME)
+        .addPath("serie")
+        .addPath(mangaId)
+        .build(),
       method: "GET",
     };
 
     const $ = await this.fetchCheerio(request);
 
     // Extract the primary title
-    const title = $('.post-title h1').text().trim();
-
+    const title = $(".post-title h1").text().trim();
 
     // Extract alternative titles
     const altNames: string[] = [];
-    $('.summary-heading:contains("Alt Name(s)")').next('.summary-content').each((_, element) => {
-      const altName = $(element).text().trim();
-      if (altName) altNames.push(altName);
-    });
+    $('.summary-heading:contains("Alt Name(s)")')
+      .next(".summary-content")
+      .each((_, element) => {
+        const altName = $(element).text().trim();
+        if (altName) altNames.push(altName);
+      });
 
     // Extract thumbnail URL
-// In getMangaDetails function, ensure image URL is valid
-    const image = $('.summary_image img').attr('data-src') ||
-        $('.summary_image img').attr('src') ||
-        '';
+    // In getMangaDetails function, ensure image URL is valid
+    const image =
+      $(".summary_image img").attr("data-src") ||
+      $(".summary_image img").attr("src") ||
+      "";
     const validImage = image.trim();
     // Extract description
-    const description = $('.summary__content p').text().trim();
+    const description = $(".summary__content p").text().trim();
 
     // Extract status
     let status = "UNKNOWN";
-    const statusText = $('.summary-heading:contains("Status")').next('.summary-content').text().trim().toLowerCase();
-    if (statusText.includes('ongoing')) {
+    const statusText = $('.summary-heading:contains("Status")')
+      .next(".summary-content")
+      .text()
+      .trim()
+      .toLowerCase();
+    if (statusText.includes("ongoing")) {
       status = "ONGOING";
-    } else if (statusText.includes('completed')) {
+    } else if (statusText.includes("completed")) {
       status = "COMPLETED";
     }
 
     // Extract authors
     const authors: string[] = [];
-    $('.summary-heading:contains("Author(s)")').next('.summary-content').find('a').each((_, element) => {
-      authors.push($(element).text().trim());
-    });
+    $('.summary-heading:contains("Author(s)")')
+      .next(".summary-content")
+      .find("a")
+      .each((_, element) => {
+        authors.push($(element).text().trim());
+      });
 
     // Extract artists
     const artists: string[] = [];
-    $('.summary-heading:contains("Artist(s)")').next('.summary-content').find('a').each((_, element) => {
-      artists.push($(element).text().trim());
-    });
+    $('.summary-heading:contains("Artist(s)")')
+      .next(".summary-content")
+      .find("a")
+      .each((_, element) => {
+        artists.push($(element).text().trim());
+      });
 
     // Extract genres
     const genres: string[] = [];
-    $('.summary-heading:contains("Genre(s)")').next('.summary-content').find('a').each((_, element) => {
-      genres.push($(element).text().trim());
-    });
+    $('.summary-heading:contains("Genre(s)")')
+      .next(".summary-content")
+      .find("a")
+      .each((_, element) => {
+        genres.push($(element).text().trim());
+      });
 
     // Extract tags from the Tags section
     const tags: string[] = [];
-    $('.wp-manga-tags-list a').each((_, element) => {
-      const tag = $(element).text().trim().replace(/^#/, '');
+    $(".wp-manga-tags-list a").each((_, element) => {
+      const tag = $(element).text().trim().replace(/^#/, "");
       if (tag) tags.push(tag);
     });
-    
 
     //console.log(contentRating);
 
@@ -514,8 +559,8 @@ export class ToonilyExtension implements ToonilyImplementation {
       tagSections.push({
         id: "genres",
         title: "Genres",
-        tags: genres.map(genre => ({
-          id: genre.toLowerCase().replace(/\s+/g, '-'),
+        tags: genres.map((genre) => ({
+          id: genre.toLowerCase().replace(/\s+/g, "-"),
           title: genre,
         })),
       });
@@ -524,8 +569,8 @@ export class ToonilyExtension implements ToonilyImplementation {
       tagSections.push({
         id: "tags",
         title: "Tags",
-        tags: tags.map(tag => ({
-          id: tag.toLowerCase().replace(/\s+/g, '-'),
+        tags: tags.map((tag) => ({
+          id: tag.toLowerCase().replace(/\s+/g, "-"),
           title: tag,
         })),
       });
@@ -557,7 +602,9 @@ export class ToonilyExtension implements ToonilyImplementation {
     const $ = await this.fetchCheerio(request);
     const chapters: Chapter[] = [];
 
-    const chapterElements = $("ul.main.version-chap li.wp-manga-chapter, .listing-chapters_wrap li.wp-manga-chapter");
+    const chapterElements = $(
+      "ul.main.version-chap li.wp-manga-chapter, .listing-chapters_wrap li.wp-manga-chapter",
+    );
 
     chapterElements.each((index, element) => {
       const row = $(element);
@@ -576,14 +623,16 @@ export class ToonilyExtension implements ToonilyImplementation {
       const dateElement = row.find(".chapter-release-date i");
       if (dateElement.length > 0) {
         try {
-          const rawDate = dateElement.text().trim().replace(/,/g, '');
+          const rawDate = dateElement.text().trim().replace(/,/g, "");
           const parsedDate = new Date(rawDate);
 
           if (!isNaN(parsedDate.getTime())) {
             publishDate = parsedDate;
           }
         } catch (error) {
-          console.error(`Date parsing error for chapter ${rawChapterText}: ${error instanceof Error ? error.message : String(error)}`);
+          console.error(
+            `Date parsing error for chapter ${rawChapterText}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       }
 
@@ -605,22 +654,19 @@ export class ToonilyExtension implements ToonilyImplementation {
 
     // Add more detailed logging for final chapters array
     console.log(`Total chapters processed: ${chapters.length}`);
-    console.log('First 5 chapters:', chapters.slice(0, 5));
-    console.log('Last 5 chapters:', chapters.slice(-5));
+    console.log("First 5 chapters:", chapters.slice(0, 5));
+    console.log("Last 5 chapters:", chapters.slice(-5));
 
     return chapters.length > 0 ? chapters.reverse() : [];
   }
 
   // Populates a chapter with images
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
-
     const url = new URLBuilder(DOMAIN_NAME)
-        .addPath("serie")
-        .addPath(chapter.sourceManga.mangaId)
-        .addPath(chapter.chapterId)
-        .build();
-
-
+      .addPath("serie")
+      .addPath(chapter.sourceManga.mangaId)
+      .addPath(chapter.chapterId)
+      .build();
 
     const request = {
       url: url,
@@ -634,15 +680,19 @@ export class ToonilyExtension implements ToonilyImplementation {
       const pages: string[] = [];
 
       // Extract image URLs from chapter content
-      $('.reading-content img.wp-manga-chapter-img').each((_, img) => {
-        const rawSrc = (($(img).attr('data-src') || $(img).attr('src')) || '').trim();
+      $(".reading-content img.wp-manga-chapter-img").each((_, img) => {
+        const rawSrc = (
+          $(img).attr("data-src") ||
+          $(img).attr("src") ||
+          ""
+        ).trim();
         if (rawSrc) {
           // Ensure absolute URL and filter out ad images
-          const src = rawSrc.startsWith('http')
-              ? rawSrc
-              : `${DOMAIN_NAME}${rawSrc}`;
+          const src = rawSrc.startsWith("http")
+            ? rawSrc
+            : `${DOMAIN_NAME}${rawSrc}`;
 
-          if (!src.includes('999.png')) {
+          if (!src.includes("999.png")) {
             pages.push(src);
           }
         }
@@ -659,8 +709,12 @@ export class ToonilyExtension implements ToonilyImplementation {
         pages: pages,
       };
     } catch (error) {
-      console.error(`Chapter details fetch error: ${error instanceof Error ? error.message : String(error)}`);
-      throw new Error(`Failed to load chapter: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `Chapter details fetch error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new Error(
+        `Failed to load chapter: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -676,7 +730,6 @@ export class ToonilyExtension implements ToonilyImplementation {
     }
   }
 }
-
 
 function createDiscoverSectionItem(options: {
   id: string;
@@ -694,6 +747,5 @@ function createDiscoverSectionItem(options: {
     metadata: undefined,
   };
 }
-
 
 export const Toonily = new ToonilyExtension();
