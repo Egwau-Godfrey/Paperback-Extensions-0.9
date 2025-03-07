@@ -40,11 +40,24 @@ type ToonilyImplementation = Extension &
 // Intercepts all the requests and responses and allows you to make changes to them
 class MainInterceptor extends PaperbackInterceptor {
   override async interceptRequest(request: Request): Promise<Request> {
+    // request.headers = {
+    //   ...request.headers,
+    //   referer: DOMAIN_NAME,
+    //   origin: DOMAIN_NAME,
+    //   "user-agent": await Application.getDefaultUserAgent(),
+    //   "Cookie": "toonily-mature=1",
+    // };
+
     request.headers = {
-      ...request.headers,
-      referer: DOMAIN_NAME,
-      origin: DOMAIN_NAME,
-      "user-agent": await Application.getDefaultUserAgent(),
+      ...(request.headers ?? {}),
+      ...{
+        "user-agent": await Application.getDefaultUserAgent(),
+        referer: `${DOMAIN_NAME}/`,
+        origin: `${DOMAIN_NAME}/`,
+        ...(request.url.includes("wordpress.com") && {
+          Accept: "image/avif,image/webp,*/*",
+        }), // Used for images hosted on Wordpress blogs
+      },
       Cookie: "toonily-mature=1",
     };
 
@@ -64,8 +77,8 @@ class MainInterceptor extends PaperbackInterceptor {
 export class ToonilyExtension implements ToonilyImplementation {
   // Implementation of the main rate limiter
   mainRateLimiter = new BasicRateLimiter("main", {
-    numberOfRequests: 15,
-    bufferInterval: 10,
+    numberOfRequests: 10,
+    bufferInterval: 1,
     ignoreImages: true,
   });
 
